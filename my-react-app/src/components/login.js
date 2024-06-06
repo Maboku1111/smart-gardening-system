@@ -1,80 +1,58 @@
-import { useContext } from "react";
-import { AuthContext } from "./AuthProvider";
-import { useNavigate } from "react-router-dom";
+import React, { useRef, useState } from 'react'
+import { Form, Button, Card, Alert } from 'react-bootstrap'
+import { useAuth } from '../contexts/AuthContext'
+import { Link, useHistory } from 'react-router-dom'
 
-const Login = () => {
-  const { loginUser, loading, user } = useContext(AuthContext);
-  const navigate = useNavigate();
+export default function Login() {
+  const emailRef = useRef()
+  const passwordRef = useRef()
+  const { login } = useAuth()
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(flase)
+  const history = useHistory()
 
-  // If authentication is still loading, display a loading indicator
-  if (loading) {
-    return (
-      <span className="loading loading-dots loading-lg flex item-center mx-auto"></span>
-    );
+  async function handleSubmit(e) {
+    e.preventDefault()
+
+    try {
+      setError('')
+      setLoading('true')
+      await login(emailRef.current.value, passwordRef.current.value)
+      history.push("/")
+    } catch {
+      setError('Failed to sign in')
+    }
+    setLoading('false')
+
+    signup(emailRef.current.value, passwordRef.current.value)
   }
 
-  // If the user is already authenticated, redirect to the home page
-  if (user) {
-    navigate("/");
-  }
-
-  // Handle form submission for user login
-  const handleFormSubmit = (e) => {
-    e.preventDefault();
-    const email = e.target.email.value;
-    const password = e.target.password.value;
-    loginUser(email, password)
-      .then((result) => {
-        console.log(result);
-        navigate("/");
-      })
-      .catch((error) => console.log(error.message));
-
-    e.target.reset();
-  };
-
-  // Render the login form
   return (
-    <div>
-      <div className="min-h-screen bg-base-200">
-        <div className="hero-content flex-col">
-          <div className="card flex-shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
-            <div className="card-body">
-              <form onSubmit={handleFormSubmit}>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Email</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="email"
-                    placeholder="Email"
-                    className="input input-bordered"
-                  />
-                </div>
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Password</span>
-                  </label>
-                  <input
-                    type="password"
-
-
-                    name="password"
-                    placeholder="Password"
-                    className="input input-bordered"
-                  />
-                </div>
-                <div className="form-control mt-6">
-                  <button className="btn btn-primary">Login</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
+    <>
+      <Card>
+        <Card.Body>
+          <h2 className="text-center mb-4">Log In</h2>
+          {currentUser.email}
+          {error && <Alert variant="danger">{error}</Alerts>}
+          <Form onSubmit={handleSubmit}>
+            <Form.Group id="email">
+              <Form.Label>Email</Form.Label>
+              <Form.Control type="email" ref={emailRef} required/>
+            </Form.Group>
+            <Form.Group id="password">
+              <Form.Label>Password</Form.Label>
+              <Form.Control type="password" ref={passwordRef} required/>
+            </Form.Group>
+            <Button disabled={loading} className="w-100" type="Submit">
+              Log In
+            </Button>
+          </Form>
+          
+        </Card.Body>
+      </Card>
+      <div className="w-100 text-center mt-2">
+        Need an accout? <Link to="/signup">Sign Up</Link>
       </div>
-    </div>
-  );
-};
-
-export default Login;
+    </>
+  )
+}
