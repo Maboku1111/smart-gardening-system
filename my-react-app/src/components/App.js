@@ -2,10 +2,10 @@ import React from "react"
 import SignUp from "./signup";
 import { Container } from "react-bootstrap";
 import { AuthProvider } from "../contexts/AuthContext";
-import { BrowserRouter as Router, Switch, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Dashboard from "./Dashboard"
 import Login from "./login"
-import PrivateRoute from './PrivateRoute'
+// import PrivateRoute from './PrivateRoute'
 
 function App() {
     return (
@@ -16,11 +16,11 @@ function App() {
             <div className="w-100" style={{ maxWidth: '400px' }}>
                 <Router>
                     <AuthProvider>
-                        <Switch>
+                        <Routes>
                             <Route exact path="/" component={Dashboard}/>
-                            <Route path="/signup" component={signup} />
-                            <Route path="/login" component={login} />
-                        </Switch>    
+                            <Route path="/signup" component={SignUp} />
+                            <Route path="/login" component={Login} />
+                        </Routes>    
                     </AuthProvider>
                 </Router>
             </div>

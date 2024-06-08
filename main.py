@@ -1,4 +1,5 @@
 # Entry code for the application
+from odmantic import ObjectId
 import uvicorn
 'import firebase_admin'
 import pyrebase
@@ -8,23 +9,26 @@ from fastapi import FastAPI, Request, APIRouter, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
-from pymongo import MongoClient
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
+from pydantic_settings import BaseSettings
 import requests
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+from typing import Optional
+import contextlib
+from starlette.applications import Starlette
 'import setuptools'
 
 
-uri = "mongodb+srv://dbUser:rUgTNHNyKf7nlOUE>@weather-app-db.rlxfbge.mongodb.net/?retryWrites=true&w=majority&appName=weather-app-db"
-
-app = FastAPI()
+router = APIRouter()
 '''
+app = FastAPI() 
+
 router = APIRouter()
 app.include_router(router)
 '''
 
-client = MongoClient(uri, server_api=ServerApi('1'))
+client = AsyncIOMotorClient(os.getenv('DB_URL'))
 
 try:
     client.admin.command('ping')
@@ -46,9 +50,30 @@ app.add_middleware(
     allow_headers=allow_all
 )
 
+class CommonSettings(BaseSettings):
+    APP_NAME: str = "FARM Starter"
+    DEBUG_MODE: bool = False
+
+class ServerSettimgs(BaseSettings):
+    HOST: str = "0.0.0.0"
+    PORT: int = 0000
+
+class DatabaseSettings(BaseSettings):
+    DB_URL: str
+    DB_NAME: str
+
+class Settings(CommonSettings, ServerSettimgs, DatabaseSettings):
+    pass
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
+
 # Data models for MongoDB
 class SoilMoistureData(BaseModel):
-    id: int
+    id: Optional[ObjectId] = Field(alias="_id", default=None)
     device_id: str
     soil_moisture_level: float
     temperatue: float
@@ -57,7 +82,7 @@ class SoilMoistureData(BaseModel):
 
 
 class PlantIdentification(BaseModel):
-    id: int
+    id: Optional[ObjectId] = Field(alias="_id", default=None)
     image_url: str
     plant_name: str
     plant_species: str
@@ -65,7 +90,7 @@ class PlantIdentification(BaseModel):
 
 
 class WeatherData(BaseModel):
-    id: int
+    id: Optional[ObjectId] = Field(alias="_id", default=None)
     location: str
     temperature: float
     humidity: float
@@ -73,18 +98,37 @@ class WeatherData(BaseModel):
     precipitation: float
     timpestamp: str
 
-
+'''
 class User(BaseModel):
-    id: int
+    id: Optional[ObjectId] = Field(alias="_id", default=None)
     name: str
     email: str
     password: str
     gradening_experience: int
     location: str
+'''
 
+@contextlib.asynccontextmanager
+async def lifespan(app):
+    async with some_async_resource(): # type: ignore
+        print("Run at startup!")
+        yield
+        print("Run on shutdown!")
+
+# Database connections
+'''
+@router.on_event("startup")
+async def startup_db_client():
+    app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
+    app.mongodb = app.mongodb_client(settings.DB_NAME)
+
+@router.on_event("shutdown")
+async def shutdown_db_client():
+    app.mongodb_client.close()
+'''
 
 # signup endpoint
-@app.post("/signup", include_in_schema=False)
+@router.post("/signup", include_in_schema=False)
 async def signup(request: Request):
     req = await request.json()
     email = req['email']
@@ -101,7 +145,7 @@ async def signup(request: Request):
         return HTTPException(detail={'message': 'Error Creating User'}, status_code=400)
     
 # login endpoint
-@app.post("/login", include_in_schema=False)
+@router.post("/login", include_in_schema=False)
 async def login(request: Request):
     req_json = await request.json()
     email = req_json['email']
@@ -114,7 +158,7 @@ async def login(request: Request):
         return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
 # ping endpoint
 # ping endpoint
-@app.post("/ping", include_in_schema=False)
+@router.post("/ping", include_in_schema=False)
 async def validate(request: Request):
     headers = request.headers
     jwt = headers.get('authorization')
@@ -123,38 +167,38 @@ async def validate(request: Request):
     return user["uid"]
 
 # Soil Moisture Data Collection
-@app.post("/soil-moisture", response_model = SoilMoistureData, status_code=status.HTTP_201_CREATED)
+@router.post("/soil-moisture", response_model = SoilMoistureData, status_code=status.HTTP_201_CREATED)
 async def create_new_reading(soil: SoilMoistureData):
     with client:
         soil_dict = soil.dict()
         return soil
 
-@app.get("/soil-moisture", response_model = SoilMoistureData)
+@router.get("/soil-moisture", response_model = SoilMoistureData)
 async def get_all_readings(soil: SoilMoistureData):
     return soil
 
-@app.get("/soil-moisture/{soil_id}", response_model = SoilMoistureData)
+@router.get("/soil-moisture/{soil_id}", response_model = SoilMoistureData)
 async def get_single_reading_by_ID(soil_id: int):
     return soil_id
 
 
 # Plant Identification
-@app.post("/plants", response_model = PlantIdentification)
+@router.post("/plants", response_model = PlantIdentification)
 async def identify_plant_from_image(plant: PlantIdentification):
     plant_dict = plant.dict()
     return plant
 
-@app.get("/plants", response_model = PlantIdentification)
+@router.get("/plants", response_model = PlantIdentification)
 async def get_all_identified_plants(plant: PlantIdentification):
     return plant
 
-@app.get("/plants/{id}", response_model = PlantIdentification)
+@router.get("/plants/{id}", response_model = PlantIdentification)
 async def get_single_plant_by_id(plant_id: PlantIdentification):
     return plant_id
 
 
 # Weather Data Integration
-@app.get("/weather")
+@router.get("/weather", response_model=WeatherData)
 async def current_weather(city: str):
     api_url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid=53de5266d72d0559770b07222286e1af"
     get_weather = requests.get(api_url).json()
@@ -162,10 +206,9 @@ async def current_weather(city: str):
     lon = get_weather["coord"]["lon"]
     return {"latitude": lat, "longitude": lon}
 
-@app.get("/weather/{location}")
-async def current_weather(weather: WeatherData):
-    return weather
 
+
+'''
 # User Management
 @app.post("/users", response_model = User)
 async def create_new_user(user: User):
@@ -186,6 +229,12 @@ async def update_user_profile(user_id: int, user: User):
 @app.delete("/users/{user_id}")
 async def delete_item(user_id: int):
     return {"message": "Item deleted successfully"}
+'''
 
 if __name__ == "__main__":
-    uvicorn.run("main:app")
+    uvicorn.run(
+        "main:app",
+        host=settings.HOST,
+        reload=settings.DEBUG_MODE,
+        port=settings.PORT
+    )

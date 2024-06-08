@@ -1,16 +1,17 @@
 import React, { useRef, useState } from 'react'
 import { Form, Button, Card, Alert } from 'react-bootstrap'
 import { useAuth } from '../contexts/AuthContext'
-import { Link, History } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 export default function SignUp() {
   const emailRef = useRef()
   const passwordRef = useRef()
   const passwordConfirmRef = useRef()
   const { signup } = useAuth()
+  const { currentUser } = useState()
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(flase)
-  const history = useHistory()
+  const [loading, setLoading] = useState(false)
+  const history = Navigate()
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -38,7 +39,7 @@ export default function SignUp() {
         <Card.Body>
           <h2 className="text-center mb-4">Sign Up</h2>
           {currentUser.email}
-          {error && <Alert variant="danger">{error}</Alerts>}
+          {error && <Alert variant="danger">{error}</Alert>}
           <Form onSubmit={handleSubmit}>
             <Form.Group id="email">
               <Form.Label>Email</Form.Label>

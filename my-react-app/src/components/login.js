@@ -1,15 +1,17 @@
 import React, { useRef, useState } from 'react'
 import { Form, Button, Card, Alert } from 'react-bootstrap'
 import { useAuth } from '../contexts/AuthContext'
-import { Link, useHistory } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import SignUp from './signup';
 
 export default function Login() {
   const emailRef = useRef()
   const passwordRef = useRef()
   const { login } = useAuth()
+  const { currentUser } = useState()
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(flase)
-  const history = useHistory()
+  const [loading, setLoading] = useState(false)
+  const history = useNavigate()
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -24,7 +26,7 @@ export default function Login() {
     }
     setLoading('false')
 
-    signup(emailRef.current.value, passwordRef.current.value)
+    SignUp(emailRef.current.value, passwordRef.current.value)
   }
 
   return (
@@ -33,7 +35,7 @@ export default function Login() {
         <Card.Body>
           <h2 className="text-center mb-4">Log In</h2>
           {currentUser.email}
-          {error && <Alert variant="danger">{error}</Alerts>}
+          {error && <Alert variant="danger">{error}</Alert>}
           <Form onSubmit={handleSubmit}>
             <Form.Group id="email">
               <Form.Label>Email</Form.Label>

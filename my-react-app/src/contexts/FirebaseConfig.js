@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
 
 
-const firebaseConfig = {
+export const firebaseConfig = {
     "apiKey": "AIzaSyBJi0XzIAxdsaH6bKWPhBE6ACqwRXIm0Sc",
     "authDomain": "smart-gardening-system-auth.firebaseapp.com",
     "projectId": "smart-gardening-system-auth",

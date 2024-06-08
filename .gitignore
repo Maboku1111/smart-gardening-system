@@ -293,3 +293,8 @@ lerna-debug.log
 .DS_Store
 Thumbs.db
 
+secret-keys
+smart-gardening-system-auth_service_account_keys
+firebase_config
+FirebaseConfig
+./my-react-app/src/contexts/FirebaseConfig.js
