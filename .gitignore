@@ -294,7 +294,7 @@ lerna-debug.log
 Thumbs.db
 
 secret-keys
-smart-gardening-system-auth_service_account_keys
-firebase_config
+smart-gardening-system-auth_service_account_keys.json
+firebase_config.json
 FirebaseConfig
-./my-react-app/src/contexts/FirebaseConfig.js
+FirebaseConfig.js
