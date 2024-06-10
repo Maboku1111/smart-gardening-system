@@ -5,7 +5,7 @@ import { AuthProvider } from "../contexts/AuthContext";
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Dashboard from "./Dashboard"
 import Login from "./login"
-// import PrivateRoute from './PrivateRoute'
+import PrivateRoute from './PrivateRoute'
 
 function App() {
     return (
@@ -20,6 +20,7 @@ function App() {
                             <Route exact path="/" component={Dashboard}/>
                             <Route path="/signup" component={SignUp} />
                             <Route path="/login" component={Login} />
+                            <Route path="/PrivateRoute" component={PrivateRoute}/>
                         </Routes>    
                     </AuthProvider>
                 </Router>
