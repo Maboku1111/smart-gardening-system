@@ -24,6 +24,10 @@ export function AuthProvider({ children }) {
         return firebaseConfig.signOut()
     }
 
+    function resetPassword(email) {
+        return firebaseConfig.sendPasswordResetEmail(email)
+    }
+
     useEffect(() => {
         const unsubscribe = firebaseConfig.onAuthStateChange(user => {
             setLoading(false)
@@ -37,7 +41,8 @@ export function AuthProvider({ children }) {
         currentUser,
         login,
         signup,
-        logout
+        logout,
+        resetPassword
     }
 
 

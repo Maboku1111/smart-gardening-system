@@ -12,8 +12,8 @@ from fastapi.exceptions import HTTPException
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 import requests
-from pymongo import MongoClient
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 import os
 from typing import Optional
 import contextlib
@@ -22,14 +22,16 @@ import contextlib
 
 
 
+
 '''
 router = APIRouter()
 app.include_router(router)
 '''
 
+# Database Configurations
 # client = AsyncIOMotorClient(os.getenv('DB_URL'))
-uri = AsyncIOMotorClient(os.getenv('DB_URL'))
-client = MongoClient(uri)
+uri = os.getenv('DB_URL') 
+client = MongoClient(uri, server_api=ServerApi('1'))
 
 try:
     client.admin.command('ping')
@@ -121,18 +123,6 @@ async def lifespan(app):
         print("Run at startup!")
         yield
         print("Run on shutdown!")
-
-# Database connections
-'''
-@router.on_event("startup")
-async def startup_db_client():
-    app.mongodb_client = AsyncIOMotorClient(settings.DB_URL)
-    app.mongodb = app.mongodb_client(settings.DB_NAME)
-
-@router.on_event("shutdown")
-async def shutdown_db_client():
-    app.mongodb_client.close()
-'''
 
 # signup endpoint
 @app.post("/signup", include_in_schema=False)
