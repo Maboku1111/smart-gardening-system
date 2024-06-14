@@ -1,31 +1,16 @@
-/* import React from "react"
-import ReactDOM from "react-dom/client"
-import App from "./components/App"
-
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>
-)
-*/
-import React, { useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './components/App';
+import App from './App';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function AppWrapper() {
-  useEffect(() => {
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
-  }, []);
-
-  return null;
+  return (
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 }
 
-ReactDOM.render(<AppWrapper />, document.getElementById('root'));
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<AppWrapper />);
+

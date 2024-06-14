@@ -5,8 +5,8 @@ import { Link, Navigate } from 'react-router-dom'
 
 export default function SignUp() {
   const emailRef = useRef()
-  const passwordRef = useRef()
-  const passwordConfirmRef = useRef()
+  const passwordRef = useRef(null)
+  const passwordConfirmRef = useRef(null)
   const { signup } = useAuth()
   const { currentUser } = useState()
   const [error, setError] = useState('')

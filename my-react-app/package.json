@@ -15,10 +15,10 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "babel": "babel src --out-dir lib"
+    "babel": "babel src --out-dir lib",
+    "build": "babel src -d list"
   },
   "eslintConfig": {
     "extends": [
@@ -39,10 +39,12 @@
     ]
   },
   "devDependencies": {
-    "@babel/core": "^7.17.0",
+    "@babel/cli": "^7.24.7",
+    "@babel/core": "^7.24.7",
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@babel/plugin-syntax-jsx": "^7.24.7",
     "@babel/plugin-transform-react-jsx": "^7.24.7",
-    "@babel/preset-env": "^7.16.11",
-    "@babel/preset-react": "^7.16.7"
+    "@babel/preset-env": "^7.24.7",
+    "@babel/preset-react": "^7.24.7"
   }
 }
