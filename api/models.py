@@ -1,11 +1,11 @@
+from uuid import UUID
 from pydantic import BaseModel, Field
-from odmantic import ObjectId
 from typing import Optional
 
 
 # Data models for MongoDB
 class SoilMoistureData(BaseModel):
-    id: Optional[ObjectId] = Field(alias="_id", default=None)
+    id: UUID = Field(alias="_id", default=None)
     device_id: str
     soil_moisture_level: float
     temperatue: float
@@ -14,7 +14,7 @@ class SoilMoistureData(BaseModel):
 
 
 class PlantIdentification(BaseModel):
-    id: Optional[ObjectId] = Field(alias="_id", default=None)
+    id: UUID = Field(alias="_id", default=None)
     image_url: str
     plant_name: str
     plant_species: str
@@ -22,14 +22,14 @@ class PlantIdentification(BaseModel):
 
 
 class WeatherData(BaseModel):
-    weather_id: Optional[ObjectId] = Field(alias="_id", default=None)
+    weather_id: UUID = Field(alias="_id", default=None)
     temperature: float
     humidity: float
     wind_speed: float
     pressure: float
 
 class User(BaseModel):
-    id: Optional[ObjectId] = Field(alias="_id", default=None)
+    id: UUID = Field(alias="_id", default=None)
     name: str
     email: str
     password: str
