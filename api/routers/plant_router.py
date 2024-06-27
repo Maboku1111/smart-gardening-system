@@ -41,6 +41,7 @@ async def get_single_plant_by_id(request: Request, plant_id: PlantIdentification
     return identification
 '''
 
+from typing import List
 from fastapi import APIRouter, Request, HTTPException
 from ..models import PlantIdentification
 from .limiter import limiter
