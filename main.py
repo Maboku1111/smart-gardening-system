@@ -1,56 +1,46 @@
-# Entry code for the application
-import uvicorn
-import pyrebase
-import json
-from firebase_admin import credentials, auth
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-import os
-import contextlib
-from api.routers.plant_router import router as plant_router
-from api.routers.soil_router import router as soil_router
-from api.routers.weather_router import router as weather_router
-from api.routers.user_router import router as user_router
+from fastapi_users import FastAPIUsers
+from fastapi_users.db import BaseUserDatabase
+from contextlib import asynccontextmanager
 from api.routers.limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from api.routers import user_router, plant_router, soil_router, weather_router
 from api.config import settings
-
-
-# Database Configurations
-# client = AsyncIOMotorClient(os.getenv('DB_URL'))
-uri = os.getenv('DB_URL') 
-client = MongoClient(uri, server_api=ServerApi('1'))
-
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-
-    client.close()
-except Exception as e:
-    raise Exception(
-        "The following error occurred: ", e)
-
-
-
-
-cred = credentials.Certificate('smart-gardening-system-auth_service_account_keys.json')
-'firebase = firebase_admin.initialize_app(cred)'
-pb = pyrebase.initialize_app(json.load(open('firebase_config.json')))
+from api.user.schemas import UserCreate, UserUpdate, UserRead
+from api.db import db, User
+import uvicorn
+from beanie import init_beanie
+from api.auth import jwt_authentication
 
 app = FastAPI()
 
-app.include_router(plant_router)
-app.include_router(soil_router)
-app.include_router(weather_router)
-app.include_router(user_router)
+async def cancellation_dependency(request: Request = Depends()):
+    try:
+        yield
+    except HTTPException as exc:
+        request.abort()
+        raise exc
+
+app.dependency_overrides[cancellation_dependency] = cancellation_dependency
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_beanie(
+        database=db,
+        document_models=[
+            User,
+        ],
+    )
+
+    yield
+
+    # Shutdown event
+    app.mongodb_client.close()
 
 app.state.limiter = limiter
-
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 allow_all = ['*']
@@ -62,63 +52,81 @@ app.add_middleware(
     allow_headers=allow_all
 )
 
+class CustomUserDatabase(BaseUserDatabase[User, UserCreate]):
+    async def get(self, id: str) -> User | None:
+        return await User.get(id)
 
-@contextlib.asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with some_async_resource(): # type: ignore
-        print("Run at startup!")
-        yield
-        print("Run on shutdown!")
+    async def get_by_email(self, email: str) -> User | None:
+        return await User.find_one(User.email == email)
+
+    async def create(self, user: UserCreate) -> User:
+        user = User(**user.dict())
+        await user.insert()
+        return user
+
+    async def update(self, user: User) -> User:
+        await user.save()
+        return user
+
+    async def delete(self, user: User) -> None:
+        await user.delete()
+
+user_db = CustomUserDatabase()
+fastapi_users = FastAPIUsers(
+    User,
+    [jwt_authentication],
+    user_db,
+    UserCreate,
+    UserUpdate,
+    User,
+)
+
+app.include_router(
+    fastapi_users.get_auth_router(jwt_authentication), prefix="/auth/jwt", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_register_router(),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_reset_password_router(),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_users_router(),
+    prefix="/users",
+    tags=["users"],
+)
+
+app.include_router(user_router.router)
+app.include_router(plant_router.router)
+app.include_router(soil_router.router)
+app.include_router(weather_router.router)
+
+@app.get("/authenticated-route")
+async def authenticated_route(user: User = Depends(fastapi_users.current_user(active=True))):
+    return {"message": f"Hello {user.email}!"}
 
 @app.get("/")
 def read_root():
     return Response("Server is running.")
 
-
-# signup endpoint
-@app.post("/signup", include_in_schema=False)
-async def signup(request: Request):
-    req = await request.json()
-    email = req['email']
-    password = req['password']
-    if email is None or password is None:
-        return HTTPException(detail={'message': 'Error! Missing Email or Password'}, status_code=400)
-    try:
-        user = auth.create_user(
-            email=email,
-            password=password
-        )
-        return JSONResponse(content={'message': f'Successfully created user {user.uid}'}, status_code=200)    
-    except:
-        return HTTPException(detail={'message': 'Error Creating User'}, status_code=400)
-    
-# login endpoint
-@app.post("/login", include_in_schema=False)
-async def login(request: Request):
-    req_json = await request.json()
-    email = req_json['email']
-    password = req_json['password']
-    try:
-        user = pb.auth().sign_in_with_email_and_password(email, password)
-        jwt = user['idToken']
-        return JSONResponse(content={'token': jwt}, status_code=200)
-    except:
-        return HTTPException(detail={'message': 'There was an error logging in'}, status_code=400)
-# ping endpoint
-# ping endpoint
-@app.post("/ping", include_in_schema=False)
-async def validate(request: Request):
-    headers = request.headers
-    jwt = headers.get('authorization')
-    print(f"jwt:{jwt}")
-    user = auth.verify_id_token(jwt)
-    return user["uid"]
-
-
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host=settings.HOST,
+        log_level="info",
         reload=settings.DEBUG_MODE,
-        port=settings.PORT
+        port=settings.PORT,
+        lifespan="lifespan",
     )
+
+
+
