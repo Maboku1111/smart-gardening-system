@@ -18,13 +18,3 @@ async def create_new_reading(request: Request, soil: SoilMoistureData):
     with client:
         soil = soil.dict()
         return soil
-
-@router.get("/soil-moisture", response_model = SoilMoistureData)
-@limiter.limit("1/second")
-async def get_all_readings(request: Request, soil: SoilMoistureData):
-    return soil
-
-@router.get("/soil-moisture/{soil_id}", response_model = SoilMoistureData)
-@limiter.limit("1/second")
-async def get_single_reading_by_ID(request: Request, soil_id: int):
-    return soil_id
