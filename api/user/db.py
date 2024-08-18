@@ -3,7 +3,7 @@ from beanie import Document
 from fastapi_users.db import BeanieBaseUser
 from fastapi_users_db_beanie import BeanieUserDatabase
 import os
-from .config import settings
+from ..config import settings
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 client = motor.motor_asyncio.AsyncIOMotorClient(

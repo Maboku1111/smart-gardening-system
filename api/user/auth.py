@@ -1,7 +1,8 @@
+'''
 import jwt
 from datetime import datetime, timedelta
 from fastapi_users.authentication import BearerTransport
-from .config import settings
+from ..config import settings
 
 class MongoDBRealmJWTAuthentication(BearerTransport):
     def __init__(self, *args, **kwargs):
@@ -24,6 +25,7 @@ class MongoDBRealmJWTAuthentication(BearerTransport):
         return token
 
 jwt_authentication = MongoDBRealmJWTAuthentication(tokenUrl="auth/jwt/login")
+'''
 
 
 

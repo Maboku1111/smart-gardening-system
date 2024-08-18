@@ -9,22 +9,12 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from api.routers import user_router, plant_router, soil_router, weather_router
 from api.config import settings
-from api.user.schemas import UserCreate, UserUpdate, UserRead
-from api.db import db, User
 import uvicorn
 from beanie import init_beanie
-from api.auth import jwt_authentication
-
-app = FastAPI()
-
-async def cancellation_dependency(request: Request = Depends()):
-    try:
-        yield
-    except HTTPException as exc:
-        request.abort()
-        raise exc
-
-app.dependency_overrides[cancellation_dependency] = cancellation_dependency
+from api.user.db import User, db
+from api.user.schemas import UserCreate, UserRead, UserUpdate
+from api.user.users import auth_backend, current_active_user, fastapi_users
+# from pymongo import DBRef
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,6 +30,17 @@ async def lifespan(app: FastAPI):
     # Shutdown event
     app.mongodb_client.close()
 
+app = FastAPI(lifespan=lifespan)
+
+async def cancellation_dependency(request: Request = Depends()):
+    try:
+        yield
+    except HTTPException as exc:
+        request.abort()
+        raise exc
+
+app.dependency_overrides[cancellation_dependency] = cancellation_dependency
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -52,40 +53,11 @@ app.add_middleware(
     allow_headers=allow_all
 )
 
-class CustomUserDatabase(BaseUserDatabase[User, UserCreate]):
-    async def get(self, id: str) -> User | None:
-        return await User.get(id)
-
-    async def get_by_email(self, email: str) -> User | None:
-        return await User.find_one(User.email == email)
-
-    async def create(self, user: UserCreate) -> User:
-        user = User(**user.dict())
-        await user.insert()
-        return user
-
-    async def update(self, user: User) -> User:
-        await user.save()
-        return user
-
-    async def delete(self, user: User) -> None:
-        await user.delete()
-
-user_db = CustomUserDatabase()
-fastapi_users = FastAPIUsers(
-    User,
-    [jwt_authentication],
-    user_db,
-    UserCreate,
-    UserUpdate,
-    User,
-)
-
 app.include_router(
-    fastapi_users.get_auth_router(jwt_authentication), prefix="/auth/jwt", tags=["auth"]
+    fastapi_users.get_auth_router(auth_backend), prefix="/auth/jwt", tags=["auth"]
 )
 app.include_router(
-    fastapi_users.get_register_router(),
+    fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
     tags=["auth"],
 )
@@ -100,19 +72,19 @@ app.include_router(
     tags=["auth"],
 )
 app.include_router(
-    fastapi_users.get_users_router(),
+    fastapi_users.get_users_router(UserRead, UserUpdate),
     prefix="/users",
     tags=["users"],
 )
+
+@app.get("/authenticated-route")
+async def authenticated_route(user: User = Depends(current_active_user)):
+    return {"message": f"Hello {user.email}!"}
 
 app.include_router(user_router.router)
 app.include_router(plant_router.router)
 app.include_router(soil_router.router)
 app.include_router(weather_router.router)
-
-@app.get("/authenticated-route")
-async def authenticated_route(user: User = Depends(fastapi_users.current_user(active=True))):
-    return {"message": f"Hello {user.email}!"}
 
 @app.get("/")
 def read_root():

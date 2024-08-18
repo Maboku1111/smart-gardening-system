@@ -26,9 +26,6 @@ async def current_weather(request: Request, city: str):
         return weather_data
     else:
         print("The 'weather' key or 'id' key does not exist in the 'get_weather' dictionary.")
-<<<<<<< HEAD
-        return None
-=======
 '''
 
 from fastapi import APIRouter, Request
@@ -59,4 +56,3 @@ async def current_weather(request: Request, city: str):
     else:
         print("The 'weather' key or 'id' key does not exist in the 'get_weather' dictionary.")
         return None
->>>>>>> d54c7917c4a984e27200653c6ac6a972bbe6d45c
