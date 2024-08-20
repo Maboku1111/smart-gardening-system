@@ -1,58 +1,47 @@
-'''
-from fastapi import APIRouter, Request
-from ..models import WeatherData
-from .limiter import limiter
 import requests
+from fastapi import HTTPException, APIRouter
+from pydantic import BaseModel
+import logging
 import os
+
+logging.basicConfig(level=logging.INFO)
+
+class WeatherData(BaseModel):
+    weather_id: int
+    temperature: float
+    humidity: float
+    wind_speed: float
+    pressure: float
 
 router = APIRouter(
     prefix="/weather",
 )
 
-# Weather Data Integration
-@router.get("/weather/{city}", response_model = WeatherData)
-@limiter.limit("1/second")
-async def current_weather(request: Request, city: str):
-    api_url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={os.getenv('OPENWEATHERMAP_API_KEY')}"
-    get_weather = requests.get(api_url).json()
-    if "weather" in get_weather and "id" in get_weather["weather"]:
+@router.get("/{city}")
+async def current_weather(city: str):
+    try:
+        api_url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={os.getenv('OPENWEATHERMAP_API_KEY')}"
+        response = requests.get(api_url)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        data = response.json()
+        
+        # Validate API response keys
+        required_keys = ["weather", "main", "wind"]
+        if not all(key in data for key in required_keys):
+            raise HTTPException(status_code=404, detail="Weather data not found")
+        
+        # Extract and convert data
         weather_data = WeatherData(
-            weather_id = get_weather["weather"]["id"],
-            temperature = get_weather["main"]["temp"],
-            humidity = get_weather["main"]["humidity"],
-            wind_speed = get_weather["wind"]["speed"],
-            pressure = get_weather["main"]["pressure"]
+            weather_id=data["weather"][0]["id"],
+            temperature=data["main"]["temp"],
+            humidity=data["main"]["humidity"],
+            wind_speed=data["wind"]["speed"],
+            pressure=data["main"]["pressure"]
         )
         return weather_data
-    else:
-        print("The 'weather' key or 'id' key does not exist in the 'get_weather' dictionary.")
-'''
-
-from fastapi import APIRouter, Request
-from ..models import WeatherData
-from .limiter import limiter
-import requests
-import os
-
-router = APIRouter(
-    prefix="/weather",
-)
-
-# Weather Data Integration
-@router.get("/weather/{city}", response_model = WeatherData)
-@limiter.limit("1/second")
-async def current_weather(request: Request, city: str):
-    api_url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={os.getenv('OPENWEATHERMAP_API_KEY')}"
-    get_weather = requests.get(api_url).json()
-    if "weather" in get_weather and "id" in get_weather["weather"]:
-        weather_data = WeatherData(
-            weather_id = get_weather["weather"]["id"],
-            temperature = get_weather["main"]["temp"],
-            humidity = get_weather["main"]["humidity"],
-            wind_speed = get_weather["wind"]["speed"],
-            pressure = get_weather["main"]["pressure"]
-        )
-        return weather_data
-    else:
-        print("The 'weather' key or 'id' key does not exist in the 'get_weather' dictionary.")
-        return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"API request error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
